@@ -1,12 +1,14 @@
 import tensorrt as trt
+import os
 
 
 class ONNX2TensorRT:
 
-    def __init__(self, onnx_file=None, engine_dir=None, precision_mode=None):
+    def __init__(self, onnx_file=None, engine_file=None, precision_mode=None):
         self.onnx_file = onnx_file
-        self.engine_dir = engine_dir
+        self.engine_file = engine_file
         self.precision_mode = precision_mode
+        os.environ['CUDA_MODULE_LOADING'] = 'LAZY'
 
     def onnx2tensor_convertor(self):
         print('Conversion of ONNX File to TRT/Engine File ......')
@@ -19,7 +21,7 @@ class ONNX2TensorRT:
         network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         parser = trt.OnnxParser(network, logger)
 
-        if not (self.onnx_file and self.engine_dir):
+        if not (self.onnx_file and self.engine_file):
             print('ONNX File or Engine File Path Missing!!')
             exit()
 
@@ -61,17 +63,25 @@ class ONNX2TensorRT:
                     print(logger.log)
                 else:
                     # Saving trt File for Future use
-                    engine_file = self.engine_dir
+                    engine_file = self.engine_file
                     with open(engine_file, 'wb') as f:
                         f.write(serialize_engine)
-                    print(f'Conversion Successful!! File Available in {self.engine_dir}')
+                    print(f'Conversion Successful!! File Available in {self.engine_file}')
 
             else:
                 print('Issue with Parsing the ONNX File ....')
 
+        print('Validating Tensor-RT Model ..... ')
+        try:
+            with open(self.engine_file, 'rb') as f, trt.Runtime(trt.Logger(min_severity=trt.Logger.ERROR)) as runtime:
+                runtime.deserialize_cuda_engine(f.read())
+            print("TensorRT engine file is valid.")
+        except Exception as e:
+            print(f"TensorRT engine file is invalid. Error: {e}")
+
 
 if __name__ == '__main__':
     o2t = ONNX2TensorRT(onnx_file='../onnx_weights/Aug21_bestmodel_run1_0.038.onnx',
-                        engine_dir='../tensorrt_weights/Aug21_bestmodel_run1_0.038.engine')
+                        engine_file='../tensorrt_weights/Aug21_bestmodel_run1_0.038.engine')
 
     o2t.onnx2tensor_convertor()
