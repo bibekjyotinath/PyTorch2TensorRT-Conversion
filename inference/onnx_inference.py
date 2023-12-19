@@ -1,18 +1,18 @@
-# Importing Required Packages to convert PyTorch Models to ONNX Model
+# Importing required packages
 import onnxruntime
 import torch
 import torch.onnx
+from segmentation_models_pytorch import Unet
 
 
 class ONNXInference:
 
-    def __init__(self, pytorch_model, pytorch_weight_file_path,
-                 model_dummy_input, onnx_weight_path):
+    def __init__(self, pytorch_model=None, pytorch_weight_file_path=None,
+                 model_dummy_input=(1, 3, 480, 640), onnx_weight_path=None):
         self.pytorch_model = pytorch_model
         self.pytorch_weight_file_path = pytorch_weight_file_path
         self.model_dummy_input = model_dummy_input
         self.onnx_weight_path = onnx_weight_path
-        self.onnxruntime_infer()
 
     def onnxruntime_infer(self):
         # Checking if CUDA is available else use the CPU
@@ -68,4 +68,11 @@ class ONNXInference:
 
 
 if __name__ == '__main__':
-    pass
+    onnx_infer = ONNXInference(pytorch_model=Unet(encoder_name="resnet34", encoder_weights="imagenet",
+                                                  in_channels=3, classes=5),
+                               pytorch_weight_file_path='../pytorch_weights/Aug21_bestmodel_run1_0.038.pt',
+                               model_dummy_input=(1, 3, 1824, 2752),
+                               onnx_weight_path='../onnx_weights/Aug21_bestmodel_run1_0.038.onnx')
+
+    output = onnx_infer.onnxruntime_infer()
+    onnx_infer.pytorch_infer_comparison(output)
